@@ -53,6 +53,22 @@ class StorageWrapper:
             self._format_key(product['id']),
             product)
 
+    def delete(self, product_id):
+        delete_result = self.client.delete(self._format_key(product_id))
+        if delete_result > 0:
+            return product_id
+        else:
+            raise NotFound('Product ID {} does not exist'.format(product_id))
+
+    def list_by_keys(self, *ids):
+        keys = []
+        for id in ids:
+            k = self.client.keys(self._format_key(id))
+            keys.extend(k)
+        
+        for key in keys:
+            yield self._from_hash(self.client.hgetall(key))
+
     def decrement_stock(self, product_id, amount):
         return self.client.hincrby(
             self._format_key(product_id), 'in_stock', -amount)

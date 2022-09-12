@@ -150,3 +150,28 @@ def test_handle_order_created(
     assert b'6' == product_one[b'in_stock']
     assert b'9' == product_two[b'in_stock']
     assert b'12' == product_three[b'in_stock']
+
+
+def test_delete_product_fails_on_not_found(service_container):
+    with pytest.raises(NotFound):
+        with entrypoint_hook(service_container, 'get') as get:
+            get(777)
+
+
+@pytest.mark.parametrize('to_del_index', [0, 1, 2])
+def test_delete_one_each_product(to_del_index, service_container, products):
+    
+    with entrypoint_hook(service_container, 'list') as list_:
+        stored_products = list_()
+    stored_products = sorted(list(stored_products), key=lambda x: x['id'])
+
+    deleting_id = stored_products[to_del_index]['id']
+    stored_products.pop(to_del_index)
+    
+    with entrypoint_hook(service_container, 'delete') as delete:
+        delete(deleting_id)
+    
+    with entrypoint_hook(service_container, 'list') as list_:
+        after_products = list_()
+
+    assert (stored_products == sorted(list(after_products), key=lambda x: x['id']))

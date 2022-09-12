@@ -62,3 +62,20 @@ def test_decrement_stock(storage, create_product, redis_client):
     assert b'10' == product_one[b'in_stock']
     assert b'7' == product_two[b'in_stock']
     assert b'12' == product_three[b'in_stock']
+
+
+def test_delete_fails_on_not_found(storage):
+    with pytest.raises(storage.NotFound) as exc:
+        storage.delete(777)
+    assert 'Product ID 777 does not exist' == exc.value.args[0]
+
+
+@pytest.mark.parametrize('to_del_index', [0, 1, 2])
+def test_delete_one_each_product(to_del_index, storage, products):
+    stored_prods = sorted(list(storage.list()), key=lambda x: x['id'])
+
+    deleting_id = stored_prods[to_del_index]['id']
+    stored_prods.pop(to_del_index)
+    storage.delete(deleting_id)
+
+    assert (stored_prods == sorted(list(storage.list()), key=lambda x: x['id']))
