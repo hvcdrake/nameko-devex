@@ -74,6 +74,26 @@ class GatewayService(object):
             json.dumps({'id': product_data['id']}), mimetype='application/json'
         )
 
+
+    @http(
+        "DELETE", "/products/<string:product_id>",
+        expected_exceptions=(ValidationError, BadRequest)
+    )
+    def delete_product(self, request, product_id):
+        """Delete existing product by id - product id is required
+
+        The response contains the new product ID in a json document ::
+
+            {"id": "the_odyssey"}
+
+        """
+        # Create the product
+        self.products_rpc.delete(product_id)
+        return Response(
+            json.dumps({'id': product_id}), mimetype='application/json'
+        )
+
+
     @http("GET", "/orders/<int:order_id>", expected_exceptions=OrderNotFound)
     def get_order(self, request, order_id):
         """Gets the order details for the order given by `order_id`.
@@ -94,7 +114,11 @@ class GatewayService(object):
         order = self.orders_rpc.get_order(order_id)
 
         # Retrieve all products from the products service
-        product_map = {prod['id']: prod for prod in self.products_rpc.list()}
+        # product_map = {prod['id']: prod for prod in self.products_rpc.list()}
+
+        # Retrieve just the products that ar in the order
+        order_product_ids = [item['product_id'] for item in order['order_details']]
+        product_map = {prod['id']: prod for prod in self.products_rpc.list_by_keys(*order_product_ids)}
 
         # get the configured image root
         image_root = config['PRODUCT_IMAGE_ROOT']
