@@ -77,12 +77,12 @@ class GatewayService(object):
 
     @http(
         "DELETE", "/products/<string:product_id>",
-        expected_exceptions=(ValidationError, BadRequest)
+        expected_exceptions=(ProductNotFound)
     )
     def delete_product(self, request, product_id):
         """Delete existing product by id - product id is required
 
-        The response contains the new product ID in a json document ::
+        The response contains deleted product ID  ::
 
             {"id": "the_odyssey"}
 
@@ -181,7 +181,12 @@ class GatewayService(object):
 
     def _create_order(self, order_data):
         # check order product ids are valid
-        valid_product_ids = {prod['id'] for prod in self.products_rpc.list()}
+        # valid_product_ids = {prod['id'] for prod in self.products_rpc.list()}
+
+        # check just for the order payload product ids that are valid
+        order_product_ids = [item['product_id'] for item in order_data['order_details']]
+        valid_product_ids = {prod['id'] for prod in self.products_rpc.list_by_keys(*order_product_ids)}
+
         for item in order_data['order_details']:
             if item['product_id'] not in valid_product_ids:
                 raise ProductNotFound(
