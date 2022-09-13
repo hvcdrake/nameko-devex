@@ -94,6 +94,42 @@ class GatewayService(object):
         )
 
 
+    @http(
+        "GET", "/orders",
+        expected_exceptions=ProductNotFound
+    )
+    def list_orders(self, request):
+        """Gets orders
+        """
+        limit = 5
+        qs = request.query_string.decode()
+        if 'limit' in qs:
+            limit_param = [s.split('=')[-1] for s in qs.split('&') if 'limit' in s]
+            if limit_param:
+                limit = limit_param[0]
+        
+        orders = self.orders_rpc.list_orders(limit=limit)
+        # get the configured image root
+        image_root = config['PRODUCT_IMAGE_ROOT']
+
+        if orders:
+            # Retrieve just the products that ar in the order
+            prod_ids = set()
+            _ = [[prod_ids.add(item['product_id']) for item in o['order_details']] for o in orders]
+            product_map = {prod['id']: prod for prod in self.products_rpc.list_by_keys(*list(prod_ids))}
+
+            for order in orders:
+                for item in order['order_details']:
+                    prod_id = item['product_id']
+                    item['product'] = product_map[prod_id]
+                    item['image'] = '{}/{}.jpg'.format(image_root, prod_id)
+
+        return Response(
+            json.dumps(orders),
+            mimetype='application/json'
+        )
+
+
     @http("GET", "/orders/<int:order_id>", expected_exceptions=OrderNotFound)
     def get_order(self, request, order_id):
         """Gets the order details for the order given by `order_id`.

@@ -66,3 +66,8 @@ class OrdersService:
         order = self.db.query(Order).get(order_id)
         self.db.delete(order)
         self.db.commit()
+
+    @rpc
+    def list_orders(self, limit=5):
+        orders = self.db.query(Order).order_by(Order.created_at.desc()).limit(limit)
+        return [OrderSchema().dump(o).data for o in orders]
